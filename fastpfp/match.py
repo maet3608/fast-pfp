@@ -4,10 +4,10 @@ https://arxiv.org/pdf/1207.1114
 """
 from __future__ import print_function
 
-import torch as to
 import torch.cuda as cuda
 import numpy as np
 
+from torch import mm, zeros, ones, eye, Tensor, FloatTensor
 from sys import float_info
 
 
@@ -17,10 +17,8 @@ def check_gpu():
 
 
 def loss(A1, A2, L1, L2, P, lam=0.0):
-    from torch import mm
     return 0.5 * (A1 - mm(P, mm(A2, P.t()))).norm() + lam * (
                 L1 - mm(P, L2)).norm()
-    # return 0.5 * norm(A1 - P.dot(A2.dot(P.T))) + lam * norm(L1 - P.dot(L2))
 
 
 def discretize(X):
@@ -45,18 +43,16 @@ def get_sizes(A1, A2):
 
 
 def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0):
-    from torch import mm, zeros, ones, eye
-
     threshold1 = threshold2 = 1.0e-6
     max_iter1 = max_iter2 = 100
     eps1 = eps2 = float_info.max
     #dt = cuda.FloatTensor if cuda.is_available() else to.FloatTensor
-    dt = to.FloatTensor
+    dt =  FloatTensor
 
-    L1 = to.Tensor(L1).type(dt)
-    L2 = to.Tensor(L2).type(dt)
-    A1 = to.Tensor(A1).type(dt)
-    A2 = to.Tensor(A2).type(dt)
+    L1 = Tensor(L1).type(dt)
+    L2 = Tensor(L2).type(dt)
+    A1 = Tensor(A1).type(dt)
+    A2 = Tensor(A2).type(dt)
 
     n1, n2 = get_sizes(A1, A2)
     o1 = ones(n1, 1).type(dt)
@@ -96,7 +92,7 @@ def run():
     A1 = np.array([[0, 1, 1, 0], [1, 0, 0, 0], [1, 0, 0, 1], [0, 0, 1, 0]])
     A2 = np.array([[0, 1, 1], [1, 0, 0], [1, 0, 0]])
 
-    X = pfp(A1, A2, L1, L2, lam=0.0)
+    X = pfp(A1, A2, L1, L2, lam=1.0)
     P = discretize(X)
 
     R = P.dot(A2.dot(P.T))
