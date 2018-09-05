@@ -16,9 +16,9 @@ def check_gpu():
     print(cuda.get_device_name(0))
 
 
-def loss(A1, A2, L1, L2, P, lam=0.0):
-    return 0.5 * (A1 - mm(P, mm(A2, P.t()))).norm() + lam * (
-                L1 - mm(P, L2)).norm()
+def loss(A1, A2, L1, L2, X, lam=0.0):
+    return 0.5 * (A1 - mm(X, mm(A2, X.t()))).norm() + lam * (
+            L1 - mm(X, L2)).norm()
 
 
 def discretize(X):
@@ -42,12 +42,20 @@ def get_sizes(A1, A2):
     return n1, n2
 
 
-def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0):
+def get_datatype(device_id):
+    if device_id is None:
+        dt = FloatTensor
+    else:
+        dt = cuda.FloatTensor
+        cuda.set_device(device_id)
+    return dt
+
+
+def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
+    dt = get_datatype(device_id)
     threshold1 = threshold2 = 1.0e-6
     max_iter1 = max_iter2 = 100
     eps1 = eps2 = float_info.max
-    #dt = cuda.FloatTensor if cuda.is_available() else to.FloatTensor
-    dt =  FloatTensor
 
     L1 = Tensor(L1).type(dt)
     L2 = Tensor(L2).type(dt)
@@ -59,11 +67,11 @@ def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0):
     O1 = ones(n1, n2).type(dt)
     O2 = ones(n1, n1).type(dt)
     I = eye(n1).type(dt)
-    I1 = I / n1
 
     X = O1.div(n1 * n2).type(dt)
     Y = zeros(n1, n1).type(dt)
     K = mm(L1, L2.t()).type(dt)
+    I1 = I / n1
 
     for _ in range(max_iter1):
         Y[:n1, :n2] = mm(A1, mm(X, A2)) + lam * K
@@ -79,8 +87,7 @@ def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0):
         Xnew /= Xnew.max()
         eps1 = (Xnew - X).abs().max()
         X = Xnew
-        print('loss =', loss(A1, A2, L1, L2, X))
-        print(X)
+        # print('loss =', loss(A1, A2, L1, L2, X))
         if eps1 < threshold1:
             break
     return X
@@ -92,7 +99,7 @@ def run():
     A1 = np.array([[0, 1, 1, 0], [1, 0, 0, 0], [1, 0, 0, 1], [0, 0, 1, 0]])
     A2 = np.array([[0, 1, 1], [1, 0, 0], [1, 0, 0]])
 
-    X = pfp(A1, A2, L1, L2, lam=1.0)
+    X = pfp(A1, A2, L1, L2, lam=1.0, device_id=None)
     P = discretize(X)
 
     R = P.dot(A2.dot(P.T))
@@ -106,5 +113,5 @@ def run():
 
 
 if __name__ == '__main__':
-    check_gpu()
+    # check_gpu()
     run()
