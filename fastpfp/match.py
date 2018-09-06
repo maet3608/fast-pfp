@@ -18,6 +18,13 @@ def loss(A1, A2, L1, L2, X, lam=0.0):
 
 
 def discretize(X):
+    """
+    Returns partial permutation matrix for result PFP result matrix X.
+
+    :param np.array X: Result matrix return by pfp()
+    :return: Partial permutation matrix
+    :rtype: np.array
+    """
     X = X.numpy().copy()
     min_x = X.min() - 1.
     P = np.zeros(X.shape)
@@ -54,6 +61,28 @@ def num_nodes(A1, A2):
 
 
 def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
+    """
+    Matches two graphs given by node vectors and adjacency matrices.
+
+    Note that adjacency matrices must be square, symmetric and that the
+    number of nodes (rows,cols) of A1 is greater or equal to A2.
+    Adjacency matrices can be binary or float matrices, e.g.
+    distances between graph nodes.
+
+    :param np.array A1: Adjacency matrix of first graph.
+    :param np.array A2: Adjacency matrix of second graph.
+    :param np.array L1: Node vector (=labels) matrix of first graph.
+    :param np.array L2: Node vector (=labels) matrix of second graph.
+    :param float alpha: Step size.
+    :param float lam: Trade off between matching of node vectors and
+       matching of edges.
+    :param int|None device_id:
+       None: automatic. Pick GPU if available otherwise CPU.
+      -1: CPU
+      int: Device id.
+    :return: result matrix of projected fixed point method
+    :rtype: np.array
+    """
     threshold1 = threshold2 = 1.0e-6
     max_iter1 = max_iter2 = 100
     dt = datatype(device_id)
@@ -94,13 +123,25 @@ def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
     return X
 
 
+def match_graphs(*args, **kwargs):
+    """
+    Returns node permuation matrix for matched graphs.
+
+    :param args: See pfp()
+    :param kwargs: See pfp()
+    :return: Permutation matrix
+    :rtype: np.array
+    """
+    return discretize(pfp(*args, **kwargs))
+
+
 def run():
     L1 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
     L2 = np.array([[0, 0], [0, 1], [1, 0]])
     A1 = np.array([[0, 1, 1, 0], [1, 0, 0, 0], [1, 0, 0, 1], [0, 0, 1, 0]])
     A2 = np.array([[0, 1, 1], [1, 0, 0], [1, 0, 0]])
 
-    X = pfp(A1, A2, L1, L2, lam=1.0, device_id=None)
+    X = pfp(A1, A2, L1, L2, lam=1.0, device_id=-1)
     P = discretize(X)
 
     R = P.dot(A2.dot(P.T))
