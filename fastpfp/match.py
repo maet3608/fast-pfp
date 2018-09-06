@@ -13,8 +13,23 @@ from torch import mm, zeros, ones, eye, Tensor
 
 
 def loss(A1, A2, L1, L2, X, lam=0.0):
-    return 0.5 * (A1 - mm(X, mm(A2, X.t()))).norm() + lam * (
-            L1 - mm(X, L2)).norm()
+    """
+    Return loss for graph matching.
+
+    :param torch.Tensor A1: Adjacency matrix of first graph.
+    :param torch.Tensor A2: Adjacency matrix of second graph.
+    :param torch.Tensor L1: Node vector (=labels) matrix of first graph.
+    :param torch.Tensor L2: Node vector (=labels) matrix of second graph.
+    :param torch.Tensor X: Result matrix of pfp()
+    :param float lam: Trade off between matching of node vectors and
+       matching of edges.
+    :return: loss
+    :rtype: float
+    """
+    edge_loss = 0.5 * (A1 - mm(X, mm(A2, X.t()))).norm()
+    node_loss = (L1 - mm(X, L2)).norm()
+    loss = (edge_loss + lam * node_loss)
+    return loss.numpy()
 
 
 def discretize(X):
@@ -25,7 +40,7 @@ def discretize(X):
     :return: Partial permutation matrix
     :rtype: np.array
     """
-    X = X.numpy().copy()
+    X = X.copy()
     min_x = X.min() - 1.
     P = np.zeros(X.shape)
     while (X > min_x).any():
@@ -60,7 +75,7 @@ def num_nodes(A1, A2):
     return n1, n2
 
 
-def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
+def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None, verbose=False):
     """
     Matches two graphs given by node vectors and adjacency matrices.
 
@@ -80,6 +95,7 @@ def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
        None: automatic. Pick GPU if available otherwise CPU.
       -1: CPU
       int: Device id.
+    :param bool verbose: Print loss if True.
     :return: result matrix of projected fixed point method
     :rtype: np.array
     """
@@ -117,10 +133,11 @@ def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
         Xnew /= Xnew.max()
         eps1 = (Xnew - X).abs().max()
         X = Xnew
-        # print('loss =', loss(A1, A2, L1, L2, X))
+        if verbose:
+            print('loss =', loss(A1, A2, L1, L2, X))
         if eps1 < threshold1:
             break
-    return X
+    return X.numpy()
 
 
 def match_graphs(*args, **kwargs):
@@ -133,26 +150,3 @@ def match_graphs(*args, **kwargs):
     :rtype: np.array
     """
     return discretize(pfp(*args, **kwargs))
-
-
-def run():
-    L1 = np.array([[0, 0], [0, 1], [1, 0], [1, 1]])
-    L2 = np.array([[0, 0], [0, 1], [1, 0]])
-    A1 = np.array([[0, 1, 1, 0], [1, 0, 0, 0], [1, 0, 0, 1], [0, 0, 1, 0]])
-    A2 = np.array([[0, 1, 1], [1, 0, 0], [1, 0, 0]])
-
-    X = pfp(A1, A2, L1, L2, lam=1.0, device_id=-1)
-    P = discretize(X)
-
-    R = P.dot(A2.dot(P.T))
-    D = A1 - R
-    print('*******************')
-    print(P)
-    print(X)
-    print(A1)
-    print(R)
-    print(D)
-
-
-if __name__ == '__main__':
-    run()
