@@ -1,19 +1,15 @@
 """
-Implements the graph matching algorithm described in
-https://arxiv.org/pdf/1207.1114
-using numpy and Pytorch
+.. module:: match
+   :synopsis: Implements the graph matching algorithm described in
+              https://arxiv.org/pdf/1207.1114
+              using numpy and Pytorch
 """
 from __future__ import print_function
 
-import torch.cuda as cuda
 import numpy as np
 
-from torch import mm, zeros, ones, eye, Tensor, FloatTensor
-
-
-def check_gpu():
-    print(cuda.is_available())
-    print(cuda.get_device_name(0))
+from fastpfp.util import datatype
+from torch import mm, zeros, ones, eye, Tensor
 
 
 def loss(A1, A2, L1, L2, X, lam=0.0):
@@ -55,15 +51,6 @@ def num_nodes(A1, A2):
     assert np.allclose(A1, A1.T, atol=1e-8), 'A1 must be symmetric!'
     assert np.allclose(A2, A2.T, atol=1e-8), 'A2 must be symmetric!'
     return n1, n2
-
-
-def datatype(device_id):
-    if device_id is None:
-        dt = FloatTensor
-    else:
-        dt = cuda.FloatTensor
-        cuda.set_device(device_id)
-    return dt
 
 
 def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
@@ -127,5 +114,4 @@ def run():
 
 
 if __name__ == '__main__':
-    # check_gpu()
     run()
