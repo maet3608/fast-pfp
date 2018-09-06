@@ -2,7 +2,7 @@
 Utility function
 """
 
-from numpy import np
+import numpy as np
 
 
 def edges2matrix(nodes, edges):
