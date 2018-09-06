@@ -1,6 +1,7 @@
 """
 Implements the graph matching algorithm described in
 https://arxiv.org/pdf/1207.1114
+using numpy and Pytorch
 """
 from __future__ import print_function
 
@@ -8,7 +9,6 @@ import torch.cuda as cuda
 import numpy as np
 
 from torch import mm, zeros, ones, eye, Tensor, FloatTensor
-from sys import float_info
 
 
 def check_gpu():
@@ -33,16 +33,31 @@ def discretize(X):
     return P
 
 
-def get_sizes(A1, A2):
+def num_nodes(A1, A2):
+    """Return number of nodes for the two adjacency matrices given.
+
+    Also checks that adjacency matrices are square, symmetric and that the
+    number of nodes (rows,cols) of A1 is greater or equal to A2
+    (as required by the algorithm).
+    Adjacency matrices can be binary or float matrices, e.g.
+    distances between graph nodes.
+
+    :param np.array A1: First adjacency matrix.
+    :param np.array A2: Second adjacency matrix.
+    :rtype : tuple(int, int)
+    :return: Number of rows (=cols) of matrix A1 and matrix A2
+    """
     n1, m1 = A1.shape
     n2, m2 = A2.shape
-    assert n1 == m1
-    assert n2 == m2
-    assert n1 >= n1
+    assert n1 == m1, 'A1 must be square!'
+    assert n2 == m2, 'A2 must be square!'
+    assert n1 >= n1, 'number of rows/cols in A1 >= A2 is required'
+    assert np.allclose(A1, A1.T, atol=1e-8), 'A1 must be symmetric!'
+    assert np.allclose(A2, A2.T, atol=1e-8), 'A2 must be symmetric!'
     return n1, n2
 
 
-def get_datatype(device_id):
+def datatype(device_id):
     if device_id is None:
         dt = FloatTensor
     else:
@@ -52,17 +67,16 @@ def get_datatype(device_id):
 
 
 def pfp(A1, A2, L1, L2, alpha=0.5, lam=1.0, device_id=None):
-    dt = get_datatype(device_id)
     threshold1 = threshold2 = 1.0e-6
     max_iter1 = max_iter2 = 100
-    eps1 = eps2 = float_info.max
+    dt = datatype(device_id)
+    n1, n2 = num_nodes(A1, A2)
 
     L1 = Tensor(L1).type(dt)
     L2 = Tensor(L2).type(dt)
     A1 = Tensor(A1).type(dt)
     A2 = Tensor(A2).type(dt)
 
-    n1, n2 = get_sizes(A1, A2)
     o1 = ones(n1, 1).type(dt)
     O1 = ones(n1, n2).type(dt)
     O2 = ones(n1, n1).type(dt)
