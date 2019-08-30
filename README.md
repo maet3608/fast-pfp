@@ -6,6 +6,6 @@ for graph matching introduced in the following [paper](https://arxiv.org/pdf/120
 
 ## Related links
 
-- [Implementation by Emanuele Olivetti](https://github.com/emanuele/fastPFP/blob/master/fastPFP.py)
+- [Another implementation by Emanuele Olivetti](https://github.com/emanuele/fastPFP/blob/master/fastPFP.py)
 
 
